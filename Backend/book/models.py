@@ -28,23 +28,17 @@ class Book(models.Model):
     def __str__(self):
         return self.title
 
-    def get_languages(self):
-        """Retourne les langues sous forme de liste."""
-        return [lang.strip() for lang in self.language.split(",")]
-
-    def set_languages(self, langs):
-        """Met à jour le champ language avec une liste de langues."""
-        self.language = ", ".join(langs)
-
     class Meta:
         app_label = 'book'
 
 
 class Index(models.Model):
+    """Index inversé : mot -> livres"""
     word = models.CharField(max_length=255, db_index=True)
     book = models.ForeignKey(Book, on_delete=models.CASCADE, db_index=True)
     occurrences_count = models.IntegerField()
     positions = models.JSONField(default=list, blank=True)
+
     class Meta:
         unique_together = ('word', 'book')
 
@@ -52,6 +46,21 @@ class Index(models.Model):
         return f"{self.word} in {self.book.title}"
 
     def get_positions(self):
-        if self.positions:
-            return self.positions
-        return []
+        return self.positions or []
+
+
+class ForwardIndex(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, db_index=True)
+    word = models.CharField(max_length=255)
+    occurrences_count = models.IntegerField(default=0)  # <-- ajouter default ici
+    positions = models.JSONField(default=list, blank=True)
+
+
+    class Meta:
+        unique_together = ('book', 'word')
+
+    def __str__(self):
+        return f"{self.book.title} -> {self.word}"
+
+    def get_positions(self):
+        return self.positions or []
