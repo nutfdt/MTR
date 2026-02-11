@@ -1,4 +1,4 @@
-# MTR — My Gutenberg Search 📚
+# MTR — My Academic Search
 
 ## Description
 
@@ -66,13 +66,28 @@ Projet full‑stack pour la recherche et l'exploration de livres (backend Django
    python manage.py migrate
    ```
 
-6. Démarrer le serveur Django :
+6. Récupération de données
+
+    ```bash
+   python Scripts/fetch_books.py
+   ```
+
+Pour récupérer les livres de la bibliothèque de Gutenberg faisant plus de 10 000 mot
+
+
+ 
+
+Pour récupérer les index sans les mots et permettre la recherche inversée
+# (Optionnel) Indexer les livres importés
+python Scripts/fetch_index.py
+
+7. Démarrer le serveur Django :
 
    ```bash
    python manage.py runserver
    ```
 
-7. Tests backend :
+8. Tests backend :
 
    ```bash
    python manage.py test
