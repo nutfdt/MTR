@@ -8,16 +8,15 @@ Projet full‑stack pour la recherche et l'exploration de livres (backend Django
 
 ## Table des matières
 
-- ✅ Prérequis
-- ⚙️ Installation & démarrage (Backend)
-- ⚙️ Installation & démarrage (Frontend)
-- 🔌 Endpoints API
-- 🐞 Dépannage rapide
-- 📌 Bonnes pratiques / remarques
+- Prérequis
+- Installation & démarrage (Backend)
+- Installation & démarrage (Frontend)
+- Endpoints API
+- Dépannage rapide
 
 ---
 
-## ✅ Prérequis
+## Prérequis
 
 - Python 3.11 (64 bits recommandé)
 - Node.js (v18+) et npm
@@ -26,9 +25,9 @@ Projet full‑stack pour la recherche et l'exploration de livres (backend Django
 
 ---
 
-## ⚙️ Backend — Mise en place (local)
+## Backend — Mise en place (local)
 
-1. Cloner le dépôt et se placer dans le dossier du projet.
+1. Cloner le repo et se placer dans le dossier du projet.
 
 2. Créer et activer un environnement virtuel depuis le dossier `Backend` :
 
@@ -60,6 +59,8 @@ Projet full‑stack pour la recherche et l'exploration de livres (backend Django
      docker-compose up -d
      ```
 
+Configuration : les variables d'environnement importantes (définies dans `docker-compose.yml` ou un fichier `.env`) incluent `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_HOST` et `DB_PORT`. Par défaut, Django tourne sur le port `8000` (`http://localhost:8000`) et le frontend sur `5173` (`npm run dev`).
+
 5. Appliquer les migrations :
 
    ```bash
@@ -69,17 +70,14 @@ Projet full‑stack pour la recherche et l'exploration de livres (backend Django
 6. Récupération de données
 
     ```bash
-   python Scripts/fetch_books.py
+   python Scripts/fetch_books.py    # Récupère les livres d'un minimum de 10 000 mots
+   python Scripts/fetch_index.py    # Construit les index pour la recherche plein‑texte
+   python Scripts/fetch_inverse.py  # Génére l'index inversé pour la recherche par mot
    ```
 
-Pour récupérer les livres de la bibliothèque de Gutenberg faisant plus de 10 000 mot
+Exécuter les scripts depuis le répertoire `Backend` avec le venv activé.
 
-
- 
-
-Pour récupérer les index sans les mots et permettre la recherche inversée
-# (Optionnel) Indexer les livres importés
-python Scripts/fetch_index.py
+Remarque : `fetch_books` applique un filtrage des stop‑words (the, and, …). `fetch_index` est optionnel si les index ont déjà été générés.
 
 7. Démarrer le serveur Django :
 
@@ -95,7 +93,7 @@ python Scripts/fetch_index.py
 
 ---
 
-## ⚙️ Frontend — Mise en place
+## Frontend — Mise en place
 
 1. Se placer dans le dossier `frontend` :
 
@@ -114,7 +112,7 @@ python Scripts/fetch_index.py
 
 ---
 
-## 🔌 Endpoints API (résumé)
+## Endpoints API (résumé)
 
 Base : `http://<HOST>:<PORT>/api/`
 
@@ -128,9 +126,19 @@ Base : `http://<HOST>:<PORT>/api/`
 
 Paramètres courants : `q`, `page`, `page_size`, `author` (filtrage côté API)
 
+Exemples rapides :
+- Recherche simple :
+  ```bash
+  curl "http://localhost:8000/api/books/search/?q=poe&page=1&page_size=10"
+  ```
+- Récupérer un livre par ID :
+  ```bash
+  curl "http://localhost:8000/api/books/123/"
+  ```
+
 ---
 
-## 🐞 Dépannage rapide
+## Dépannage rapide
 
 - Erreur `ModuleNotFoundError: No module named 'scipy'` :
   - Assurez‑vous d'avoir installé les dépendances dans le venv actif :
