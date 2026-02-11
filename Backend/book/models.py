@@ -52,15 +52,18 @@ class Index(models.Model):
 class ForwardIndex(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, db_index=True)
     word = models.CharField(max_length=255)
-    occurrences_count = models.IntegerField(default=0)  # <-- ajouter default ici
+    occurrences_count = models.IntegerField(default=0)
     positions = models.JSONField(default=list, blank=True)
-
+    # Champs TF-IDF
+    tf = models.FloatField(default=0.0)  # Term Frequency
+    idf = models.FloatField(default=0.0)  # Inverse Document Frequency
+    tfidf = models.FloatField(default=0.0)  # Score TF-IDF
 
     class Meta:
         unique_together = ('book', 'word')
 
     def __str__(self):
-        return f"{self.book.title} -> {self.word}"
+        return f"{self.book.title} -> {self.word} (TF-IDF: {self.tfidf:.4f})"
 
     def get_positions(self):
         return self.positions or []

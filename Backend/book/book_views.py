@@ -8,8 +8,8 @@ from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
-from django.db.models import Q, Count
-from .models import Book, Index
+from django.db.models import Q, Count, Sum, Avg
+from .models import Book, Index, ForwardIndex
 from .serializers import BookSerializer
 from nltk.tokenize import word_tokenize
 
@@ -125,6 +125,73 @@ class BookSearchView(generics.ListAPIView):
         results = sorted(similar_books, key=lambda x: (x["occurrences_count"], x["pagerank_score"]), reverse=True)
 
         return self.get_paginated_response(results)
+
+class BookTFIDFSearchView(generics.ListAPIView):
+    """Vue de recherche basée sur les scores TF-IDF"""
+    serializer_class = BookSerializer
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        query = self.request.query_params.get("q", "").strip().lower()
+        if not query:
+            return Book.objects.none()
+        
+        # Rechercher les livres qui contiennent le terme avec leurs scores TF-IDF
+        forward_entries = ForwardIndex.objects.filter(
+            word=query,
+            tfidf__gt=0  # Seulement les termes avec un score TF-IDF positif
+        ).select_related('book').order_by('-tfidf')
+        
+        # Extraire les IDs des livres triés par score TF-IDF
+        book_ids = [entry.book.id for entry in forward_entries]
+        
+        # Retourner les livres dans l'ordre de pertinence TF-IDF
+        if book_ids:
+            books = Book.objects.filter(id__in=book_ids)
+            # Préserver l'ordre de tri par TF-IDF
+            book_dict = {book.id: book for book in books}
+            ordered_books = [book_dict[book_id] for book_id in book_ids if book_id in book_dict]
+            return ordered_books
+        
+        return Book.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        query = request.query_params.get("q", "").strip().lower()
+        if not query:
+            return Response({"results": [], "count": 0})
+
+        # Obtenir la liste ordonnée par TF-IDF
+        ordered_books = self.get_queryset()
+        
+        if not ordered_books:
+            return Response({"results": [], "count": 0})
+
+        # Paginer les résultats
+        page = self.paginate_queryset(ordered_books)
+        if page is not None:
+            # Ajouter les métadonnées TF-IDF aux résultats
+            enriched_results = []
+            for book in page:
+                try:
+                    forward_entry = ForwardIndex.objects.get(book=book, word=query)
+                    book_data = BookSerializer(book).data
+                    book_data.update({
+                        "tf_score": round(forward_entry.tf, 6),
+                        "idf_score": round(forward_entry.idf, 6), 
+                        "tfidf_score": round(forward_entry.tfidf, 6),
+                        "word_occurrences": forward_entry.occurrences_count,
+                        "relevance_source": "TF-IDF"
+                    })
+                    enriched_results.append(book_data)
+                except ForwardIndex.DoesNotExist:
+                    # Fallback au cas où l'entrée n'existe pas
+                    enriched_results.append(BookSerializer(book).data)
+            
+            return self.get_paginated_response(enriched_results)
+        
+        # Si pas de pagination, retourner tous les résultats
+        serializer = BookSerializer(ordered_books, many=True)
+        return Response(serializer.data)
 
 class BookAdvancedSearchView(APIView):
     pagination_class = CustomPagination
