@@ -5,13 +5,27 @@ services:
     image: postgres:14
     restart: always
     environment:
-      POSTGRES_DB: library       # Correspond à DATABASES['default']['NAME']
-      POSTGRES_USER: postgres    # Correspond à DATABASES['default']['USER']
-      POSTGRES_PASSWORD: password  # Correspond à DATABASES['default']['PASSWORD']
+      POSTGRES_DB: library       
+      POSTGRES_USER: postgres    
+      POSTGRES_PASSWORD: password  
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"  # Expose le port PostgreSQL sur la machine hôte
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"  # Interface web accessible sur http://localhost:5050
+    depends_on:
+      - db
+
 volumes:
   postgres_data:
+  pgadmin_data:
