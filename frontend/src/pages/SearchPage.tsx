@@ -21,17 +21,10 @@ const SearchPage: React.FC = () => {
     }
   };
 
-  const handleLogoClick = () => {
-    navigate('/');
-  };
 
   return (
     <div className="search-page">
       <Header 
-        searchQuery={localQuery}
-        onSearchChange={setLocalQuery}
-        onSearch={handleSearch}
-        onLogoClick={handleLogoClick}
       />
       
       <main className="search-main">
@@ -43,10 +36,9 @@ const SearchPage: React.FC = () => {
           <section className="results-section">
             <SearchResults />
           </section>
-          
-          <aside className="sidebar-right">
+          <section className="results-section">
             <Suggestions />
-          </aside>
+          </section>
         </div>
       </main>
     </div>

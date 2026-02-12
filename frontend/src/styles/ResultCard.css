@@ -1,141 +1,190 @@
+/* src/styles/ResultCard.css - Styles avec surlignage */
+
 .result-card {
   background: white;
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .result-card:hover {
-  transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-color: #1976d2;
+  transform: translateY(-2px);
 }
 
-.result-header {
+/* Header */
+.result-card-header {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
-.result-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
+.book-cover-mini {
+  width: 60px;
+  height: 80px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
   flex-shrink: 0;
-
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
-.result-icon img {
+
+.book-cover-mini img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* ou contain selon le rendu voulu */
-  border-radius: 10px;
+  object-fit: cover;
 }
 
-.result-info {
+.book-cover-mini span {
+  font-size: 28px;
+}
+
+.book-info-mini {
   flex: 1;
+  min-width: 0;
 }
 
-.result-title {
+.book-title-result {
   font-size: 18px;
   font-weight: 600;
   color: #2c3e50;
   margin-bottom: 0.25rem;
-  cursor: pointer;
-  transition: color 0.3s ease;
+  line-height: 1.4;
 }
 
-.result-title:hover {
-  color: #1976d2;
-}
-
-.result-author {
+.book-author-result {
   font-size: 14px;
   color: #64748b;
+  margin: 0;
 }
 
-.result-relevance {
+.result-badges {
+  display: flex;
+  gap: 0.5rem;
   flex-shrink: 0;
 }
 
-.relevance-badge {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 14px;
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
-  color: white;
+  white-space: nowrap;
 }
 
-.result-body {
+.badge.relevance {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.badge.occurrences {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Body */
+.result-card-body {
   margin-bottom: 1rem;
 }
 
-.result-occurrences {
-  font-size: 13px;
+.book-excerpt {
+  font-size: 14px;
   color: #64748b;
-  margin-bottom: 0.5rem;
+  line-height: 1.6;
+  margin: 0;
 }
 
-.result-excerpt {
+/* Excerpt surligné */
+.highlighted-excerpt {
   font-size: 14px;
-  color: #475569;
+  color: #2c3e50;
   line-height: 1.6;
 }
 
-.result-actions {
+.highlighted-excerpt mark {
+  background: #fef08a;
+  color: #854d0e;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+/* Footer */
+.result-card-footer {
   display: flex;
   gap: 0.75rem;
 }
 
-.action-btn {
+.preview-btn,
+.read-btn {
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
   transition: all 0.3s ease;
+  border: none;
 }
 
 .preview-btn {
+  background: #f5f7fa;
+  color: #2c3e50;
+}
+
+.preview-btn:hover {
+  background: #e0e6ed;
+  transform: translateY(-1px);
+}
+
+.read-btn {
   background: #1976d2;
   color: white;
 }
 
-.preview-btn:hover {
+.read-btn:hover {
   background: #1565c0;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
 }
 
-.open-btn {
-  background: transparent;
-  color: #1976d2;
-  border: 1px solid #1976d2;
-}
+/* Responsive */
+@media (max-width: 768px) {
+  .result-card {
+    padding: 1rem;
+  }
 
-.open-btn:hover {
-  background: rgba(25, 118, 210, 0.1);
-}
+  .result-card-header {
+    flex-wrap: wrap;
+  }
 
-.favorite-btn {
-  background: transparent;
-  color: #e53935;
-  border: 1px solid #e0e6ed;
-  padding: 0.5rem;
-  min-width: auto;
-}
+  .book-cover-mini {
+    width: 50px;
+    height: 70px;
+  }
 
-.favorite-btn:hover {
-  background: rgba(229, 57, 53, 0.1);
-  border-color: #e53935;
-}
+  .result-badges {
+    width: 100%;
+    justify-content: flex-start;
+    order: 3;
+  }
 
-.favorite-btn.active {
-  background: rgba(229, 57, 53, 0.1);
-  border-color: #e53935;
+  .result-card-footer {
+    flex-direction: column;
+  }
+
+  .preview-btn,
+  .read-btn {
+    width: 100%;
+  }
 }
