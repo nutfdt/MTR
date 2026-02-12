@@ -1,131 +1,136 @@
-// src/components/Suggestions.tsx - UPDATED avec données API
+// src/components/Suggestions.tsx - Avec images des livres
 
-import React from 'react';
-import '../styles/Suggestions.css';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
+import '../styles/Suggestions.css';
+
+interface SuggestedBook {
+  id: number;
+  title: string;
+  author: string;
+  cover: string;
+  hasImage: boolean;
+}
 
 const Suggestions: React.FC = () => {
-  const { suggestions, performSearch } = useSearch();
+  const navigate = useNavigate();
+  const { searchResults } = useSearch();
+  const [suggestions, setSuggestions] = useState<SuggestedBook[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const renderStars = (rating: number) => {
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      loadSuggestions();
+    } else {
+      loadPopularBooks();
+    }
+  }, [searchResults]);
+
+  const loadPopularBooks = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8000/api/books/?page=1&page_size=8');
+      
+      if (!response.ok) throw new Error('Failed');
+      
+      const data = await response.json();
+      const books = data.results || [];
+      
+      const formatted: SuggestedBook[] = books.map((book: any) => ({
+        id: book.id,
+        title: book.title.substring(0, 60),
+        author: book.authors?.[0]?.name || 'Auteur inconnu',
+        cover: book.cover_image || '📚',
+        hasImage: !!book.cover_image
+      }));
+      
+      setSuggestions(formatted);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSuggestions = async () => {
+    try {
+      setLoading(true);
+      
+      // Prendre les top 3 résultats de recherche
+      const topResults = searchResults.slice(0, 3);
+      const resultIds = new Set(topResults.map(b => b.id));
+      
+      // Récupérer des livres différents
+      const response = await fetch('http://localhost:8000/api/books/?page=1&page_size=20');
+      
+      if (!response.ok) throw new Error('Failed');
+      
+      const data = await response.json();
+      const allBooks = data.results || [];
+      
+      // Filtrer pour avoir des livres différents
+      const differentBooks = allBooks.filter((book: any) => !resultIds.has(book.id));
+      
+      const formatted: SuggestedBook[] = differentBooks.slice(0, 8).map((book: any) => ({
+        id: book.id,
+        title: book.title.substring(0, 60),
+        author: book.authors?.[0]?.name || 'Auteur inconnu',
+        cover: book.cover_image || '📚',
+        hasImage: !!book.cover_image
+      }));
+      
+      setSuggestions(formatted);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBookClick = (bookId: number) => {
+    navigate(`/book/preview/${bookId}`);
+  };
+
+  if (loading) {
     return (
-      <div className="rating-stars">
-        {[1, 2, 3, 4, 5].map(star => (
-          <span key={star} className={star <= rating ? 'star filled' : 'star'}>
-            ★
-          </span>
-        ))}
+      <div className="suggestions-container">
+        <div className="loading">Chargement...</div>
       </div>
     );
-  };
+  }
 
-  const handleSearchClick = (query: string) => {
-    performSearch(query, 'simple');
-  };
+  if (suggestions.length === 0) {
+    return null;
+  }
 
   return (
     <div className="suggestions-container">
-      <h2 className="suggestions-title">Suggestions</h2>
-
-      {/* Livres similaires - Données de l'API */}
-      {suggestions.similar && suggestions.similar.length > 0 && (
-        <div className="suggestion-section">
-          <h3 className="section-title">Livres populaires</h3>
-          <div className="suggestion-list">
-            {suggestions.similar.map(book => (
-              <div key={book.id} className="suggestion-item book-item">
-                <div className="book-cover">
-                  {typeof book.image === 'string' && book.image.startsWith('http') ? (
-                    <img src={book.image} alt={book.title} />
-                  ) : (
-                    <span>{book.image}</span>
-                  )}
-                </div>
-                <div className="book-info">
-                  <p className="book-title">{book.title}</p>
-                  {renderStars(book.rating)}
-                </div>
-              </div>
-            ))}
+      <h2 className="suggestions-title">
+        {searchResults.length > 0 ? 'Suggestions similaires' : 'Livres populaires'}
+      </h2>
+      
+      <div className="suggestions-grid">
+        {suggestions.map(book => (
+          <div 
+            key={book.id} 
+            className="suggestion-card"
+            onClick={() => handleBookClick(book.id)}
+          >
+            <div className="suggestion-cover">
+              {book.hasImage ? (
+                <img src={book.cover} alt={book.title} className="cover-image" />
+              ) : (
+                <span className="cover-icon">{book.cover}</span>
+              )}
+            </div>
+            <div className="suggestion-info">
+              <h3 className="suggestion-title">{book.title}</h3>
+              <p className="suggestion-author">{book.author}</p>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Recherches populaires - Données de l'API */}
-      {suggestions.popular && suggestions.popular.length > 0 && (
-        <div className="suggestion-section">
-          <h3 className="section-title">Recherches populaires</h3>
-          <div className="suggestion-list">
-            {suggestions.popular.map(search => (
-              <div 
-                key={search.id} 
-                className="suggestion-item search-item clickable"
-                onClick={() => handleSearchClick(search.query)}
-              >
-                <span className="search-icon">🔍</span>
-                <span className="search-query">{search.query}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Connexion Jaccard - Visualisation */}
-      <div className="suggestion-section">
-        <h3 className="section-title">Connexion Jaccard</h3>
-        <div className="jaccard-graph">
-          <svg width="100%" height="150" viewBox="0 0 200 150">
-            {/* Nodes */}
-            <circle cx="50" cy="75" r="20" fill="#42a5f5" opacity="0.8" />
-            <circle cx="100" cy="30" r="25" fill="#1976d2" opacity="0.9" />
-            <circle cx="100" cy="120" r="20" fill="#42a5f5" opacity="0.8" />
-            <circle cx="150" cy="75" r="20" fill="#42a5f5" opacity="0.8" />
-            
-            {/* Edges */}
-            <line x1="50" y1="75" x2="100" y2="30" stroke="#90caf9" strokeWidth="2" opacity="0.6" />
-            <line x1="50" y1="75" x2="100" y2="120" stroke="#90caf9" strokeWidth="2" opacity="0.6" />
-            <line x1="100" y1="30" x2="150" y2="75" stroke="#90caf9" strokeWidth="2" opacity="0.6" />
-            <line x1="100" y1="120" x2="150" y2="75" stroke="#90caf9" strokeWidth="2" opacity="0.6" />
-            <line x1="100" y1="30" x2="100" y2="120" stroke="#90caf9" strokeWidth="3" opacity="0.8" />
-          </svg>
-          <p className="jaccard-description">
-            Visualisation des similarités entre livres basée sur l'indice de Jaccard
-          </p>
-        </div>
+        ))}
       </div>
-
-      {/* Top recommandés - Données de l'API */}
-      {suggestions.recommended && suggestions.recommended.length > 0 && (
-        <div className="suggestion-section">
-          <h3 className="section-title">Top recommandés</h3>
-          <div className="suggestion-list">
-            {suggestions.recommended.map(book => (
-              <div key={book.id} className="suggestion-item book-item">
-                <div className="book-cover">
-                  {typeof book.image === 'string' && book.image.startsWith('http') ? (
-                    <img src={book.image} alt={book.title} />
-                  ) : (
-                    <span>{book.image}</span>
-                  )}
-                </div>
-                <div className="book-info">
-                  <p className="book-title">{book.title}</p>
-                  {renderStars(book.rating)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Message si aucune suggestion */}
-      {(!suggestions.similar || suggestions.similar.length === 0) &&
-       (!suggestions.popular || suggestions.popular.length === 0) &&
-       (!suggestions.recommended || suggestions.recommended.length === 0) && (
-        <div className="no-suggestions">
-          <p>Chargement des suggestions...</p>
-        </div>
-      )}
     </div>
   );
 };

@@ -73,9 +73,6 @@ const BookReaderPage: React.FC = () => {
       const extractedChapters = extractChapters(data.text_content);
       setChapters(extractedChapters);
       
-      console.log(`📖 Livre chargé: ${data.title}`);
-      console.log(`📄 Pages totales: ${Math.ceil(data.text_content.length / CHARS_PER_PAGE)}`);
-      console.log(`📚 Chapitres trouvés: ${extractedChapters.length}`);
       
     } catch (err) {
       console.error('Erreur lors du chargement du livre:', err);
@@ -92,7 +89,6 @@ const BookReaderPage: React.FC = () => {
     const contentsMatch = text.match(/CONTENTS\r?\n([\s\S]{1,3000}?)(?:\r?\n\r?\n\r?\n|Letter 1|Chapter 1|CHAPTER I)/i);
     
     if (contentsMatch) {
-      console.log('📚 Section CONTENTS trouvée');
       const contentsText = contentsMatch[1];
       const lines = contentsText.split(/\r?\n/);
       
@@ -126,7 +122,6 @@ const BookReaderPage: React.FC = () => {
     
     // Fallback
     if (chapters.length === 0) {
-      console.log('📚 Recherche chapitres dans le texte...');
       const patterns = [
         /^Letter\s+\d+/gim,
         /^CHAPTER\s+[IVXLCDM]+/gim,

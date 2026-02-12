@@ -22,7 +22,6 @@ const LoginPage: React.FC = () => {
     }
 
     // Simulation de connexion (remplacer par appel API)
-    console.log('Login:', { email, password, rememberMe });
     
     // Simulation réussie - redirection
     setTimeout(() => {

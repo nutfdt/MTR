@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import BookPreviewPage from './pages/Bookpreviewpage';
 import BookReaderPage from './pages/Bookreaderpage';
+import AdvancedSearchPage from './components/AdvancedSearchPage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/book/preview/:bookId" element={<BookPreviewPage />} />
           <Route path="/book/read/:bookId" element={<BookReaderPage />} />
+           <Route path="/advanced-search" element={<AdvancedSearchPage />}/>
         </Routes>
       </Router>
     </SearchProvider>

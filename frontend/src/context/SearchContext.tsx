@@ -1,12 +1,13 @@
-// src/context/SearchContext.tsx - FINAL avec config centralisé
-
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Book, Filters, SearchType, Suggestions } from '../types';
-import { API_ENDPOINTS, API_CONFIG, DEFAULT_PAGE_SIZE } from '../Api/config';
+import { API_ENDPOINTS, API_CONFIG, DEFAULT_PAGE_SIZE, type SearchMode } from '../Api/config';
+import type { ApiSearchResponse } from '../types/types';
 
 interface SearchContextType {
   searchQuery: string;
   searchType: SearchType;
+  searchMode: SearchMode;
+  searchScope: 'all' | 'title' | 'author';
   filters: Filters;
   searchResults: Book[];
   suggestions: Suggestions;
@@ -15,10 +16,13 @@ interface SearchContextType {
   currentPage: number;
   totalPages: number;
   totalResults: number;
+  highlightedResults: Map<number, string>;
   setSearchQuery: (query: string) => void;
   setSearchType: (type: SearchType) => void;
+  setSearchMode: (mode: SearchMode) => void;
+  setSearchScope: (scope: 'all' | 'title' | 'author') => void;
   updateFilters: (newFilters: Partial<Filters>) => void;
-  performSearch: (query: string, type?: SearchType) => void;
+  performSearch: (query: string, type?: SearchType, mode?: SearchMode, scope?: 'all' | 'title' | 'author') => void;
   setSearchResults: (results: Book[]) => void;
   setSuggestions: (suggestions: Suggestions) => void;
   loadNextPage: () => void;
@@ -43,6 +47,8 @@ interface SearchProviderProps {
 export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<SearchType>('simple');
+  const [searchMode, setSearchMode] = useState<SearchMode>('simple');
+  const [searchScope, setSearchScope] = useState<'all' | 'title' | 'author'>('all');
   const [filters, setFilters] = useState<Filters>({
     caseSensitive: false,
     exactMatch: false,
@@ -53,10 +59,10 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
   });
 
   const [searchResults, setSearchResults] = useState<Book[]>([]);
+  const [highlightedResults, setHighlightedResults] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // États de pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
@@ -69,7 +75,6 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     recommended: []
   });
 
-  // Charger les livres et suggestions au démarrage
   useEffect(() => {
     loadInitialBooks();
     loadSuggestions();
@@ -81,7 +86,6 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
 
   const loadSuggestions = async () => {
     try {
-      // Charger les livres recommandés (top 3 par download_count)
       const recommendedResponse = await fetch(
         API_ENDPOINTS.BOOKS_PAGINATED(1, 3),
         API_CONFIG
@@ -94,11 +98,10 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
         setSuggestions(prev => ({
           ...prev,
           recommended: recommendedBooks,
-          similar: recommendedBooks // Pour l'instant, utiliser les mêmes
+          similar: recommendedBooks
         }));
       }
 
-      // Charger les recherches populaires (simulation basée sur sujets populaires)
       const popularBooks = await fetch(
         API_ENDPOINTS.BOOKS_PAGINATED(1, 5),
         API_CONFIG
@@ -117,11 +120,8 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
         }));
       }
 
-      console.log('✅ Suggestions chargées');
       
     } catch (err) {
-      console.warn('⚠️ Erreur chargement suggestions:', err);
-      // Garder les suggestions vides en cas d'erreur
     }
   };
 
@@ -145,34 +145,45 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      console.log('🔄 Chargement depuis:', url);
       const response = await fetch(url, API_CONFIG);
       
       if (!response.ok) {
-        throw new Error(`Erreur ${response.status}`);
+        let errorMessage = `Erreur ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.error || errorMessage;
+        } catch (e) {
+        }
+        throw new Error(errorMessage);
       }
       
-      const data = await response.json();
-      console.log('✅ Données reçues:', data);
+      const data: ApiSearchResponse = await response.json();
       
-      // Mettre à jour la pagination
       setTotalResults(data.count || 0);
       setTotalPages(Math.ceil((data.count || 0) / DEFAULT_PAGE_SIZE));
       setNextPageUrl(data.next);
       setPreviousPageUrl(data.previous);
       
-      // Transformer les données
       const transformedBooks = transformApiBooks(data.results || []);
       setSearchResults(transformedBooks);
       
-      // Scroll vers le haut
+      if (searchMode === 'highlight') {
+        const highlightMap = new Map<number, string>();
+        data.results.forEach((book: any) => {
+          if (book.highlighted_text) {
+            highlightMap.set(book.id, book.highlighted_text);
+          }
+        });
+        setHighlightedResults(highlightMap);
+      }
+      
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
-      console.log('✅ Résultats transformés:', transformedBooks.length);
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Erreur chargement:', err);
-      setError('Erreur lors du chargement des livres');
+      setError(err.message || 'Erreur lors du chargement des livres');
+      setSearchResults([]);
     } finally {
       setLoading(false);
     }
@@ -183,26 +194,38 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
   };
 
   const transformApiBooks = (apiBooks: any[]): Book[] => {
+    
     return apiBooks.map((book, index) => {
-      const author = book.authors && book.authors.length > 0 
-        ? book.authors[0].name 
-        : 'Auteur inconnu';
+      let author = 'Auteur inconnu';
+      if (book.authors && Array.isArray(book.authors) && book.authors.length > 0) {
+        author = book.authors[0].name;
+      }
 
-      const excerpt = book.description 
-        ? book.description.substring(0, 200) + '...'
-        : (book.text_content 
-          ? book.text_content.substring(0, 200) + '...'
-          : 'Aucun aperçu disponible...');
+      let excerpt = 'Aucun aperçu disponible...';
+      if (book.description && book.description.trim()) {
+        excerpt = book.description.substring(0, 200) + '...';
+      } else if (book.text_content && book.text_content.trim()) {
+        excerpt = book.text_content.substring(0, 200) + '...';
+      }
 
       const icons = ['📘', '📙', '📗', '📕', '📓', '📔', '📖', '📚'];
       const colors = ['#1976d2', '#f57c00', '#388e3c', '#d32f2f', '#7b1fa2', '#0288d1', '#c2185b', '#5d4037'];
 
+      const occurrences = book.occurrences_count || 0;
+      
+      let relevance = 70;
+      if (book.pagerank_score && book.pagerank_score > 0) {
+        relevance = Math.min(100, Math.floor(book.pagerank_score * 1000));
+      } else if (book.download_count && book.download_count > 0) {
+        relevance = Math.min(100, Math.floor(book.download_count / 1000));
+      }
+
       return {
         id: book.id,
-        title: book.title,
+        title: book.title || 'Sans titre',
         author: author,
-        relevance: book.download_count ? Math.min(100, Math.floor(book.download_count / 1000)) : 70,
-        occurrences: 0,
+        relevance: relevance,
+        occurrences: occurrences,
         excerpt: excerpt,
         icon: book.cover_image || icons[index % icons.length],
         color: colors[index % colors.length]
@@ -210,12 +233,20 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     });
   };
 
-  const performSearch = async (query: string, type: SearchType = 'simple') => {
+  const performSearch = async (
+    query: string, 
+    type: SearchType = 'simple', 
+    mode: SearchMode = 'simple',
+    scope: 'all' | 'title' | 'author' = 'all'
+  ) => {
     setSearchQuery(query);
     setSearchType(type);
+    setSearchMode(mode);
+    setSearchScope(scope);
     setCurrentPage(1);
     setLoading(true);
     setError(null);
+    setHighlightedResults(new Map());
 
     if (!query.trim()) {
       await loadInitialBooks();
@@ -223,19 +254,33 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     }
 
     try {
-      // Utiliser les endpoints de config
-      const url = type === 'simple'
-        ? API_ENDPOINTS.SEARCH_SIMPLE(query, 1, DEFAULT_PAGE_SIZE)
-        : API_ENDPOINTS.SEARCH_ADVANCED(query, 1, DEFAULT_PAGE_SIZE);
+      let url = '';
+      
 
-      console.log('🔍 Recherche:', url);
+      // Choisir l'endpoint selon le type
+      if (type === 'regex') {
+        url = API_ENDPOINTS.SEARCH_ADVANCED(query, 1, DEFAULT_PAGE_SIZE);
+        
+      } else if (mode === 'highlight') {
+        url = API_ENDPOINTS.SEARCH_HIGHLIGHT(query, 1, DEFAULT_PAGE_SIZE);
+        
+      } else {
+        url = API_ENDPOINTS.SEARCH_SIMPLE(query, 1, DEFAULT_PAGE_SIZE);
+      }
+
       const response = await fetch(url, API_CONFIG);
       
       if (!response.ok) {
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        let errorMessage = `Erreur ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.error || errorMessage;
+        } catch (e) {
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      const data: ApiSearchResponse = await response.json();
       
       setTotalResults(data.count || data.results?.length || 0);
       setTotalPages(Math.ceil((data.count || data.results?.length || 0) / DEFAULT_PAGE_SIZE));
@@ -243,66 +288,81 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
       setPreviousPageUrl(data.previous || null);
       
       let transformedBooks = transformApiBooks(data.results || []);
+
+      if (mode === 'highlight') {
+        const highlightMap = new Map<number, string>();
+        data.results.forEach((book: any) => {
+          if (book.highlighted_text) {
+            highlightMap.set(book.id, book.highlighted_text);
+          }
+        });
+        setHighlightedResults(highlightMap);
+      }
+      if (scope !== 'all') {
+        transformedBooks = filterByScope(transformedBooks, query, scope);
+      }
+
       transformedBooks = applyClientFilters(transformedBooks, query);
+      
       transformedBooks = sortResults(transformedBooks, filters.sortBy);
 
       setSearchResults(transformedBooks);
       
-      console.log(`✅ Trouvé ${transformedBooks.length} résultats pour "${query}"`);
       
-    } catch (err) {
-      console.error('❌ Erreur de recherche:', err);
-      setError('Erreur lors de la recherche');
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la recherche');
       setSearchResults([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadNextPage = async () => {
-    console.log('▶️ loadNextPage appelé');
+  const filterByScope = (books: Book[], query: string, scope: 'title' | 'author'): Book[] => {
+    const lowerQuery = query.toLowerCase();
     
+    return books.filter(book => {
+      if (scope === 'title') {
+        return book.title.toLowerCase().includes(lowerQuery);
+      } else if (scope === 'author') {
+        return book.author.toLowerCase().includes(lowerQuery);
+      }
+      return true;
+    });
+  };
+
+  const loadNextPage = async () => {
     if (nextPageUrl) {
       setCurrentPage(prev => prev + 1);
       await loadBooksFromUrl(nextPageUrl);
-    } else {
-      console.warn('⚠️ Pas de nextPageUrl disponible');
     }
   };
 
   const loadPreviousPage = async () => {
-    console.log('◀️ loadPreviousPage appelé');
-    
     if (previousPageUrl) {
       setCurrentPage(prev => prev - 1);
       await loadBooksFromUrl(previousPageUrl);
-    } else {
-      console.warn('⚠️ Pas de previousPageUrl disponible');
     }
   };
 
   const goToPage = async (page: number) => {
-    console.log(`🎯 goToPage appelé avec page: ${page}`);
-    
-    if (page < 1 || page > totalPages || page === currentPage) {
-      console.warn('⚠️ Page invalide');
-      return;
-    }
+    if (page < 1 || page > totalPages || page === currentPage) return;
     
     setCurrentPage(page);
     
-    // Utiliser les endpoints de config
     let url = '';
     
     if (searchQuery) {
-      url = searchType === 'simple'
-        ? API_ENDPOINTS.SEARCH_SIMPLE(searchQuery, page, DEFAULT_PAGE_SIZE)
-        : API_ENDPOINTS.SEARCH_ADVANCED(searchQuery, page, DEFAULT_PAGE_SIZE);
+      if (searchType === 'regex') {
+        url = API_ENDPOINTS.SEARCH_ADVANCED(searchQuery, page, DEFAULT_PAGE_SIZE);
+      } else if (searchMode === 'highlight') {
+        url = API_ENDPOINTS.SEARCH_HIGHLIGHT(searchQuery, page, DEFAULT_PAGE_SIZE);
+      } else {
+        url = API_ENDPOINTS.SEARCH_SIMPLE(searchQuery, page, DEFAULT_PAGE_SIZE);
+      }
     } else {
       url = API_ENDPOINTS.BOOKS_PAGINATED(page, DEFAULT_PAGE_SIZE);
     }
     
-    console.log('📡 URL construite:', url);
     await loadBooksFromUrl(url);
   };
 
@@ -312,13 +372,7 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
         return false;
       }
 
-      const text = `${book.title} ${book.author} ${book.excerpt}`.toLowerCase();
-      const searchTerm = filters.caseSensitive ? query : query.toLowerCase();
-      const occurrences = text.split(searchTerm).length - 1;
-      
-      book.occurrences = occurrences;
-
-      if (occurrences < filters.occurrencesMin) {
+      if (book.occurrences < filters.occurrencesMin) {
         return false;
       }
 
@@ -345,6 +399,8 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
   const value: SearchContextType = {
     searchQuery,
     searchType,
+    searchMode,
+    searchScope,
     filters,
     searchResults,
     suggestions,
@@ -353,8 +409,11 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     currentPage,
     totalPages,
     totalResults,
+    highlightedResults,
     setSearchQuery,
     setSearchType,
+    setSearchMode,
+    setSearchScope,
     updateFilters,
     performSearch,
     setSearchResults,

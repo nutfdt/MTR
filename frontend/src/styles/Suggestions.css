@@ -1,217 +1,147 @@
-/* src/styles/Suggestions.css - UPDATED avec layout compact */
+/* src/styles/Suggestions.css - Cards compactes et élégantes */
 
 .suggestions-container {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem 0;
 }
 
 .suggestions-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #2c3e50;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid #e0e6ed;
+  margin: 0 0 1rem 0;
 }
 
-.suggestion-section {
-  margin-bottom: 2rem;
-}
-
-.suggestion-section:last-child {
-  margin-bottom: 0;
-}
-
-.section-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* Layout HORIZONTAL pour livres */
-.suggestion-list {
+.suggestions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
 }
 
-/* Items de livre - COMPACT */
-.book-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
+.suggestion-card {
+  background: white;
   border-radius: 8px;
+  overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid #e0e6ed;
-  background: #fafbfc;
-  min-height: 140px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.book-item:hover {
-  background: #f0f4ff;
-  border-color: #1976d2;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+.suggestion-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
-/* Cover - PLUS PETIT */
-.book-cover {
+.suggestion-cover {
   width: 100%;
-  height: 80px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 6px;
+  height: 180px;
+  overflow: hidden;
+  background: #f5f7fa;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
 }
 
-.book-cover img {
+/* Image de couverture */
+.cover-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.book-cover span {
-  font-size: 32px;
+/* Icône de fallback */
+.cover-icon {
+  font-size: 48px;
+  color: #94a3b8;
 }
 
-/* Info livre - COMPACT */
-.book-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.suggestion-info {
+  padding: 0.75rem;
+  background: white;
 }
 
-.book-title {
+.suggestion-title {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: #2c3e50;
+  margin: 0 0 0.25rem 0;
   line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  min-height: 2.6em;
+  min-height: 34px;
 }
 
-.rating-stars {
-  display: flex;
-  gap: 2px;
-}
-
-.star {
-  color: #e0e6ed;
-  font-size: 12px;
-}
-
-.star.filled {
-  color: #fbbf24;
-}
-
-/* Recherches populaires - LISTE */
-.search-item {
-  padding: 0.75rem 1rem;
-  background: #f5f7fa;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.search-item:hover {
-  background: #e0e6ed;
-  border-color: #1976d2;
-  transform: translateX(4px);
-}
-
-.search-item.clickable {
-  cursor: pointer;
-}
-
-.search-icon {
-  font-size: 16px;
-  opacity: 0.6;
-}
-
-.search-query {
-  font-size: 14px;
-  color: #1976d2;
-  font-weight: 500;
-  flex: 1;
-}
-
-/* Jaccard graph */
-.jaccard-graph {
-  padding: 1.5rem;
-  background: #f5f7fa;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.jaccard-description {
-  font-size: 12px;
+.suggestion-author {
+  font-size: 11px;
   color: #64748b;
-  text-align: center;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Message "Aucune suggestion" */
-.no-suggestions {
-  padding: 2rem;
+.loading {
   text-align: center;
+  padding: 2rem;
   color: #64748b;
   font-size: 14px;
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .suggestions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  .suggestion-cover {
+    height: 160px;
+  }
+}
+
 @media (max-width: 768px) {
-  .suggestion-list {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.5rem;
+  .suggestions-container {
+    padding: 1rem 0;
   }
 
-  .book-cover {
-    height: 70px;
+  .suggestions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
   }
 
-  .book-title {
+  .suggestion-cover {
+    height: 150px;
+  }
+
+  .cover-icon {
+    font-size: 40px;
+  }
+
+  .suggestion-info {
+    padding: 0.5rem;
+  }
+
+  .suggestion-title {
     font-size: 12px;
+    min-height: 30px;
   }
 
-  .star {
-    font-size: 11px;
+  .suggestion-author {
+    font-size: 10px;
   }
 }
 
 @media (max-width: 480px) {
-  .suggestion-list {
-    grid-template-columns: repeat(2, 1fr);
+  .suggestions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
   }
 
-  .suggestions-container {
-    padding: 1rem;
+  .suggestion-cover {
+    height: 130px;
   }
 
-  .book-item {
-    min-height: 120px;
+  .cover-icon {
+    font-size: 32px;
   }
 }
